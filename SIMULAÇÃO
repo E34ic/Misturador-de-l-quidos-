@@ -1,0 +1,236 @@
+//incluindo a bibliotaca responsavel por adiciona ro display a programação
+#include <LiquidCrystal.h>
+
+//definição de portas b1,b2,m,v,snv,snc
+#define b1 9
+#define b2 8
+#define c1 A0
+#define c2 A1
+#define m 7
+#define v 6
+#define snv 5
+#define snc 4
+#define snvled 3
+#define sncled 2
+
+//**************************************************************
+
+//definição das portas do display 
+const int rs = 12, en = 13, d4 = A2, d5 = A3, d6 = A4, d7 = A5;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+
+const unsigned long tempoEspera = 5000; // 5 segundos
+
+unsigned long tempoInicio;//constante de tempo
+
+bool cicloIniciado = false;//variavel boleana
+
+//**************************************************************
+
+void setup() {
+  
+  //definição de portas de saída e escrita no display
+  
+    lcd.begin(16, 2);
+    pinMode(c1, INPUT_PULLUP);
+    pinMode(c2, INPUT_PULLUP);
+    pinMode(b1, OUTPUT);
+    pinMode(b2, OUTPUT);
+    pinMode(m, OUTPUT);
+    pinMode(v, OUTPUT);
+    pinMode(snv, INPUT_PULLUP);
+    pinMode(snc, INPUT_PULLUP);
+    lcd.print("Pressione C1");
+    lcd.setCursor(0, 1);
+    lcd.print("para iniciar");
+}
+
+//**************************************************************
+
+void loop() {
+  
+  //loop inicial responsavel por iniciar o programa ao pressionar c1
+  
+        if (digitalRead(c1) == LOW) {
+          
+        delay(50); // Debounce
+          
+        if (!cicloIniciado) {
+            iniciarCiclo();
+          
+        } 
+          else {
+          
+  //sai de um if e passa para else
+          
+            cicloIniciado = false;
+            finalizarCiclo();
+        }
+       
+       }else if (digitalRead(c2) == LOW) {
+      
+      //cancela o ciclo caso c2 seja pressionado
+      
+      	   delay(50); // Debounce
+           cancelarCiclo();
+    } 
+  
+        else if (cicloIniciado && millis() - tempoInicio >= tempoEspera) {
+        finalizarCiclo();
+       
+       //caso o ciclo seja iniciado,ao demorar um certo periodo de tempo (5s)
+       //onde finaza o ciclo e reinicia o processo 
+       
+    }
+}
+
+//**************************************************************
+
+void iniciarCiclo() {
+  
+    cicloIniciado = true;
+    tempoInicio = millis();
+  
+  //display e limpado e em seguida escrevemos
+  
+    lcd.clear();
+    lcd.print("Ciclo iniciado.");
+    delay(500);
+
+  //execução dos ciclos 
+  
+    executarCiclo1();
+    executarCiclo2e3();
+    executarCiclo4();
+
+    finalizarCiclo();
+}
+
+//**************************************************************
+
+void executarCiclo1() {
+  
+
+  
+    lcd.clear();
+    lcd.print("ciclo 1");
+  
+    digitalWrite(b1, HIGH);
+  
+  
+  //variavel for utilizada para determinar o tempo de funcionamento
+  //da bomba b1 = 5s,aprtir deste tempo b1 é desligado
+  
+        for (unsigned long t = millis(); millis() - t < 5000;) {
+      
+        if (digitalRead(c2) == LOW) { // Verifica se c2 foi pressionado
+           
+        cancelarCiclo();
+           
+        return;
+          
+        }
+    }
+  
+       digitalWrite(b1, LOW); 
+}
+
+//**************************************************************
+
+void executarCiclo2e3() {
+    lcd.clear();
+    lcd.print("ciclo 2");
+
+        while (true) { // Loop infinito até a condição de saída ser atendida
+          
+        if (digitalRead(c2) == LOW) { // Verifica se c2 foi pressionado
+            cancelarCiclo();
+            return;
+        }
+
+        if (digitalRead(snc) == HIGH) {
+            digitalWrite(b2, HIGH); // Mantém b2 ligado enquanto snc for HIGH
+           
+        } else {
+            digitalWrite(b2, LOW); // Desliga b2 se snc ficar LOW
+            break; // Sai do loop quando snc ficar LOW
+        }
+    }
+
+    lcd.clear();
+    lcd.print("ciclo 3");
+    digitalWrite(m, HIGH);
+  
+  
+        for (unsigned long t = millis(); millis() - t < 5000;) {
+            
+        if (digitalRead(c2) == LOW) { // Verifica se c2 foi pressionado
+            
+            cancelarCiclo();
+            return;
+        }
+    }
+          digitalWrite(m, LOW);
+}
+
+//**************************************************************
+
+void executarCiclo4() {
+    lcd.clear();
+    lcd.print("ciclo 4");
+
+        while (digitalRead(snv) == HIGH) {
+            
+        if (digitalRead(c2) == LOW) { // Verifica se c2 foi pressionado
+            
+          digitalWrite(v, LOW);
+          cancelarCiclo(); 
+            
+            return;
+        } else{digitalWrite(v, HIGH);}
+            
+          //digitalWrite(v, HIGH); // Mantém a válvula ligada enquanto snv for HIGH
+    }
+  
+  //a valvula permanecera aberta ate que snv == LOW,assim desligando a valvula
+
+   		  digitalWrite(v, LOW); // Desliga a válvula quando snv for LOW
+}
+
+//**************************************************************
+
+void finalizarCiclo() {
+  
+    cicloIniciado = false;
+    lcd.clear();
+    lcd.print("Ciclo finalizado.");
+    delay(700);
+    lcd.clear();
+    lcd.print("Pressione C1");
+    lcd.setCursor(0, 1);
+    lcd.print("para iniciar");
+}
+
+//**************************************************************
+
+void cancelarCiclo() {
+  
+  	//por fim ao percorrer todos os ciclos da função void iniciarCiclo()
+  	//iremos finalizar e reniciar o ciclo com esta função
+  
+    digitalWrite(b1,LOW);
+    digitalWrite(b2, LOW);
+    digitalWrite(m, LOW);
+    digitalWrite(v, LOW);
+  
+    cicloIniciado = false;
+    lcd.clear();
+    lcd.print("Ciclo cancelado.");
+    delay(1000);
+    lcd.clear();
+    lcd.print("Pressione C1");
+    lcd.setCursor(0, 1);
+    lcd.print("para iniciar");
+}
+
+//**************************************************************
